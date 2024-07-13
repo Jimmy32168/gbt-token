@@ -1,0 +1,84 @@
+							
+							
+// SPDX-License-Identifier: MIT							
+pragma solidity ^0.8.0;							
+							
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";							
+import "@openzeppelin/contracts/access/Ownable.sol";							
+							
+contract GBTToken is ERC20, Ownable {							
+uint256 private constant TOTAL_SUPPLY = 100000000000000000000;							
+uint8 private constant DECIMALS = 5;							
+uint256 public maxSellLimit;							
+uint256 public slippageFeeRate;							
+mapping(address => bool) public whitelist;							
+mapping(address => bool) public blacklist;							
+							
+event MaxSellLimitUpdated(uint256 newMaxSellLimit);							
+event SlippageFeeRateUpdated(uint256 newSlippageFeeRate);							
+event AddedToWhitelist(address indexed account);							
+event AddedToBlacklist(address indexed account);							
+event RemovedFromWhitelist(address indexed account);							
+event RemovedFromBlacklist(address indexed account);							
+							
+constructor() ERC20("GBT Token", "GBT") Ownable(msg.sender) {							
+_mint(msg.sender, TOTAL_SUPPLY);							
+}							
+							
+function decimals() public view virtual override returns (uint8) {							
+return DECIMALS;							
+}							
+							
+function setMaxSellLimit(uint256 newMaxSellLimit) public onlyOwner {							
+maxSellLimit = newMaxSellLimit;							
+emit MaxSellLimitUpdated(newMaxSellLimit);							
+}							
+							
+function setSlippageFeeRate(uint256 newSlippageFeeRate) public onlyOwner {							
+slippageFeeRate = newSlippageFeeRate;							
+emit SlippageFeeRateUpdated(newSlippageFeeRate);							
+}							
+							
+function addToWhitelist(address account) public onlyOwner {							
+whitelist[account] = true;							
+emit AddedToWhitelist(account);							
+}							
+							
+function removeFromWhitelist(address account) public onlyOwner {							
+whitelist[account] = false;							
+emit RemovedFromWhitelist(account);							
+}							
+							
+function addToBlacklist(address account) public onlyOwner {							
+blacklist[account] = true;							
+emit AddedToBlacklist(account);							
+}							
+							
+function removeFromBlacklist(address account) public onlyOwner {							
+blacklist[account] = false;							
+emit RemovedFromBlacklist(account);							
+}							
+							
+function sell(uint256 amount) public {							
+require(amount <= maxSellLimit, "Sell amount exceeds maximum limit");							
+require(!blacklist[msg.sender], "Address is blacklisted");							
+require(whitelist[msg.sender], "Address is not whitelisted");							
+uint256 fee = (amount * slippageFeeRate) / 100;							
+uint256 amountAfterFee = amount - fee;							
+_transfer(msg.sender, address(this), amountAfterFee);							
+_transfer(msg.sender, owner(), fee); // Transfer the fee to the contract owner							
+}							
+							
+function mint(address /*to*/, uint256 /*amount*/) public view onlyOwner {							
+revert("Minting is not allowed");							
+}							
+							
+function burn(uint256 amount) public {							
+_burn(msg.sender, amount);							
+}							
+							
+function renounceOwnership() public override onlyOwner {							
+super.renounceOwnership();							
+}							
+}							
+							
